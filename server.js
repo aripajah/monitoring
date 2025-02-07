@@ -10,13 +10,19 @@ const cors = require('cors'); // Import cors middleware
 const app = express();
 
 // Enable CORS for all routes and origins (or specify allowed origins)
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    credentials: true
+}));
+  
 
 // Parse JSON request bodies
 app.use(bodyParser.json());
 
 // Environment Variables
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 const CONNECTION_STRING = process.env.DATABASE_URL || 'postgres://postgres.hhfetohqcseicbspsbbi:qw123qew132rr254@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres';
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
@@ -224,9 +230,13 @@ app.post('/history/save', async (req, res) => {
 
         const createdAt = result.rows[0].updated_at;
 
+        // Ubah timezone ke UTC+7
+        const timezoneOffset = 7 * 60 * 60 * 1000; // 7 jam dalam milisecond
+        const createdAtJakarta = new Date(createdAt.getTime() + timezoneOffset);
+
         // Save history data to the database
         const sqlInsert = 'INSERT INTO history (idalat, created_at, duration) VALUES ($1, $2, $3)';
-        await db.query(sqlInsert, [idalat, createdAt, duration]);
+        await db.query(sqlInsert, [idalat, createdAtJakarta, duration]);
 
         // Delete all data from monitoring table for the specified idalat
         const deleteSql = 'DELETE FROM monitoring WHERE idalat = $1';
@@ -269,7 +279,7 @@ app.get('/history/:idalat', async (req, res) => {
 });
 
 // Start the Server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT} 🖥️`);
 });
 
